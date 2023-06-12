@@ -1,0 +1,21 @@
+.success-msg{
+    background-color: lightgray;
+    color : green;
+    border : 2px solid green;
+    margin: 10px;
+    padding: 10px;
+}
+
+.error-msg{
+    background-color: lightgray;
+    color: red;
+    border: 2px solid red;
+    margin: 10px;
+    padding: 10px;
+}
+
+.alert-msg{
+    margin: 0;
+    padding: 0;
+}
+

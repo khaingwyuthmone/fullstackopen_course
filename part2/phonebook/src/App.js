@@ -1,8 +1,10 @@
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import Filter from './components/Filter';
 import PersonForm from './components/PersonForm';
 import Person from './components/Person';
+import axios from 'axios'
+import services from './service/personService';
 
 let personList = [
   { name: 'Arto Hellas', number: '040-123456', id: 1 },
@@ -12,10 +14,15 @@ let personList = [
 ];
 
 const App = () => {
-  const [persons, setPersons] = useState(personList);
+  const [persons, setPersons] = useState([]);
   const [newName, setNewName] = useState('');
   const [newPhone, setNewPhone] = useState('');
+  const [alertMsg, setAlert]  = useState('');
+  const [error, setError]     = useState('');
   
+  useEffect(() => {
+    services.getAll().then(data => setPersons(data))
+  },[]);
  
   const addPhoneBook = (e) => {
     e.preventDefault();
@@ -25,12 +32,35 @@ const App = () => {
     };
     let isExistingUser  = (person) => person.name === newperson.name;
     if(! persons.some(isExistingUser)){
-      setPersons(persons.concat(newperson))
-      personList.push(newperson);
-      setNewName('');
-      setNewPhone('');
+      services.create(newperson).then(data => {
+          setPersons(persons.concat(data));
+          personList.push(newperson);
+          setNewName('');
+          setNewPhone('');
+      })
+      setAlert(`Added ${newperson.name}`);
+      setTimeout(() => {
+        setAlert('')
+      }, 5000);
     }else{
-      alert(`${newName} is already added to phonebook`);
+      if(window.confirm(`${newName} is already added to phonebook, replace the old number with a new one`)){
+        let existingUser = persons.find(person => person.name === newperson.name);
+        let id           = existingUser['id'];
+        services.update(id, newperson).then(data => {
+          setPersons(persons.map(person => {
+            return person.id !== id ? person : data
+          }));
+          setNewName('');
+          setNewPhone('');
+          setAlert(`Updated ${newperson.name}`);
+          setTimeout(() => {
+            setAlert('')
+          }, 3000);
+        }).catch(error => {
+          setError(`Information of ${newperson.name} has already been removed from server`);
+        });
+        
+      }
     }
   }
 
@@ -40,9 +70,34 @@ const App = () => {
     setPersons(filteredPerson);
   }
 
+  const deletePhonebook = (id, name) => {
+    if(window.confirm(`Delete ${name}?`)){
+      services.deletePhonebook(id).then(responseStatus => {
+        if(responseStatus === "OK"){
+            setPersons(persons.filter(person => person.id !== id))
+        }
+      })
+    }
+  }
+
+  
+
+
   return (
     <div>
       <h2>Phonebook</h2>
+
+      {alertMsg && (
+        <div className='success-msg'>
+          <h5 className='alert-msg'>{alertMsg}</h5>
+        </div>
+      )}
+
+      {error && (
+        <div className='error-msg'>
+          <h5 className='alert-msg'>{error}</h5>
+        </div>
+      )}
 
       <Filter search={searchPhoneBook}/>
 
@@ -56,7 +111,7 @@ const App = () => {
         setNewPhone={setNewPhone} />
       
       <h2>Numbers</h2>
-      {persons.map(person => <Person person={person} />)}
+      {persons.map(person => <Person key={person.id} person={person} deletePhonebook={ ()=> {deletePhonebook(person.id, person.name)}}/>)}
     </div>
   )
 }
